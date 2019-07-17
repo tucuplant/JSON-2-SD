@@ -13,6 +13,9 @@ Circuit for mega del tucuplant: (depende de la placa usa un SPI u otro)
 #include <SD.h>
 
 const int chipSelect = 53;
+bool startDatalog = false;
+int lum, hum, wl, temp;
+String date, time, datalog="datalog.txt";
 
 void setup() {
 DynamicJsonDocument doc(2048);
@@ -34,35 +37,66 @@ DynamicJsonDocument doc(2048);
   }
   Serial.println("Puedo recordar...MATAR HUMANOS.");
 
+  if(SD.exists("datalog.txt"))
+  SD.remove("datalog.txt");
+ 
+// Borrar un fichero
+
+
   
 }
 
 void loop() {
+	File dataFileWrite = SD.open("datalog.txt", FILE_WRITE);
+	File dataFileRead = SD.open("datalog.txt", FILE_READ);
+
   // make a string for assembling the data to log:
   String dataString = "";
-
+ 
   // read three sensors and append to the string:
-  for (int analogPin = 0; analogPin < 3; analogPin++) {
-    int sensor = analogRead(analogPin);
-    dataString += String(sensor);
-    if (analogPin < 2) {
-      dataString += ",";
-    }
+  if (startDatalog) {
+	  //dataString = ",{";
+
+	  if (dataFileRead.seek(dataFileRead.size() - 3) && dataFileRead.read() == 91) {
+		  Serial.println("Primer objeto");
+		  dataString = "{";
+	  }
+	  else if (dataFileRead.seek(dataFileRead.size() - 3) &&dataFileRead.read() == 125){
+		  Serial.println("otro objeto");
+		  dataString = ",{";
+  }
+	  
+
+	  dataString += "\"date\":\"17/07/2019\"";
+	  dataString += "}";
+	 
+		  
+  }
+  else {
+	dataString= "{\"device\": \"tc-79368\",\"status\" : 200,\"dtl\" :0,\"data\" : [";
+	dataString+= "]}";
+	
+	startDatalog = true;
   }
 
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
-  File dataFile = SD.open("datalog.txt", FILE_WRITE);
+ 
 
   // if the file is available, write to it:
-  if (dataFile) {
-    dataFile.println(dataString);
-    dataFile.close();
-    // print to the serial port too:
-    Serial.println(dataString);
+  if (dataFileWrite) {
+	
+    //dataFileWrite.println(dataString);
+	dataFileWrite.seek(dataFileWrite.size() - 4);
+	dataFileWrite.println(dataString);
+    dataFileWrite.close();
+
   }
   // if the file isn't open, pop up an error:
   else {
-    Serial.println("error opening datalog.txt");
+    Serial.print("error opening ");
+    Serial.println(datalog);
   }
+
+  delay(2500);
 }
