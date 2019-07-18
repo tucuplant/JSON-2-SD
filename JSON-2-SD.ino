@@ -8,17 +8,16 @@ Circuit for mega del tucuplant: (depende de la placa usa un SPI u otro)
  ** CLK - pin 13 - 52 (SCK)
  ** CS - pin 4 - 53(for MKRZero SD: SDCARD_SS_PIN)
  */
-#include <ArduinoJson.h>
 #include <SPI.h>
 #include <SD.h>
 
 const int chipSelect = 53;
-bool startDatalog = false;
+bool startDatalog = false, firstObject=false;
 int lum, hum, wl, temp;
 String date, time, datalog="datalog.txt";
 
 void setup() {
-DynamicJsonDocument doc(2048);
+//DynamicJsonDocument doc(2048);
 
 
   Serial.begin(9600);
@@ -47,7 +46,7 @@ DynamicJsonDocument doc(2048);
 }
 
 void loop() {
-	File dataFileWrite = SD.open("datalog.txt", FILE_WRITE);
+	File dataFileWrite = SD.open("datalog.txt", (O_READ | O_WRITE | O_CREAT));
 	File dataFileRead = SD.open("datalog.txt", FILE_READ);
 
   // make a string for assembling the data to log:
@@ -57,25 +56,31 @@ void loop() {
   if (startDatalog) {
 	  //dataString = ",{";
 
-	  if (dataFileRead.seek(dataFileRead.size() - 3) && dataFileRead.read() == 91) {
+    dataFileRead.seek(dataFileRead.size() - 3);
+    int last=dataFileRead.read();
+	  if (last== 91) {
 		  Serial.println("Primer objeto");
-		  dataString = "{";
 	  }
-	  else if (dataFileRead.seek(dataFileRead.size() - 3) &&dataFileRead.read() == 125){
+	  else if (last == 125){
 		  Serial.println("otro objeto");
-		  dataString = ",{";
+		  dataString = ",";
+      firstObject=true;
   }
-	  
+    dataString += "{",
+	  dataString += "\"time\":",
+    dataString += __TIME__,
+	  dataString += "}",
+    dataString += "]}";
 
-	  dataString += "\"date\":\"17/07/2019\"";
-	  dataString += "}";
-	 
+    if(firstObject){
+    Serial.print("Me muevo dos caracteres atras");
+	  dataFileWrite.seek(dataFileWrite.size() - 4);
+    }else{
+    dataFileWrite.seek(dataFileWrite.size() - 1);
+    }
 		  
-  }
-  else {
-	dataString= "{\"device\": \"tc-79368\",\"status\" : 200,\"dtl\" :0,\"data\" : [";
-	dataString+= "]}";
-	
+  }else {
+	dataString= "{\"device\": \"tucu-79368\",\"status\" : 200,\"dtl\" :0,\"data\" : [";
 	startDatalog = true;
   }
 
@@ -87,8 +92,8 @@ void loop() {
   if (dataFileWrite) {
 	
     //dataFileWrite.println(dataString);
-	dataFileWrite.seek(dataFileWrite.size() - 4);
-	dataFileWrite.println(dataString);
+    Serial.println(dataString);
+	  dataFileWrite.println(dataString);
     dataFileWrite.close();
 
   }

@@ -1,6 +1,6 @@
 {
+    "sketch": "JSON-2-SD.ino",
     "board": "arduino:avr:mega",
     "configuration": "cpu=atmega2560",
-    "sketch": "JSON-2-SD.ino",
     "port": "COM3"
 }
